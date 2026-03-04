@@ -12,6 +12,17 @@ export type ColorPalette = {
 
 export const PALETTES: ColorPalette[] = [
   {
+    id: 'minimal',
+    name: 'Minimalist',
+    colors: {
+      pentateuch: '#525252', // Neutral Gray
+      poetry: '#737373', // Neutral Gray
+      prophets: '#A3A3A3', // Neutral Gray
+      gospels: '#10B981', // Emerald (Focus)
+      epistles: '#D4D4D4', // Light Gray
+    }
+  },
+  {
     id: 'neon',
     name: 'Neon Lights',
     colors: {

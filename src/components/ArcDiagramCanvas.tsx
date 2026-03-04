@@ -177,7 +177,7 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
       
     const widthScale = d3.scaleLinear()
       .domain([minStrength, maxStrength])
-      .range([0.5, 2.5]);
+      .range([0.2, 1.5]);
 
     ctx.lineCap = 'round';
 
@@ -320,7 +320,7 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
       .attr("class", "book-rect")
       .attr("y", 0)
       .attr("height", 10)
-      .attr("fill", d => {
+      .attr("fill", (d: any) => {
         if (selectedBook && selectedBook !== 'ALL' && d.name === selectedBook) return highlightColor;
         return getCategoryForBook(d.id).color;
       })
@@ -338,10 +338,10 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
       .attr("class", "book-label")
       .attr("y", 0)
       .attr("text-anchor", "middle")
-      .text(d => d.name)
+      .text((d: any) => d.name)
       .attr("font-size", "10px")
-      .attr("fill", d => (selectedBook && selectedBook !== 'ALL' && d.name === selectedBook) ? highlightColor : getCategoryForBook(d.id).color)
-      .attr("font-weight", d => (selectedBook && selectedBook !== 'ALL' && d.name === selectedBook) ? "bold" : "normal")
+      .attr("fill", (d: any) => (selectedBook && selectedBook !== 'ALL' && d.name === selectedBook) ? highlightColor : getCategoryForBook(d.id).color)
+      .attr("font-weight", (d: any) => (selectedBook && selectedBook !== 'ALL' && d.name === selectedBook) ? "bold" : "normal")
       .style("pointer-events", "none");
 
     // Chapters
@@ -365,7 +365,7 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
       .attr("class", "chapter-label")
       .attr("y", 22)
       .attr("text-anchor", "middle")
-      .text(d => d.chapter)
+      .text((d: any) => d.chapter)
       .attr("font-size", "8px")
       .attr("fill", textColor)
       .style("pointer-events", "none");
