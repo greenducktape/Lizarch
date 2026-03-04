@@ -50,8 +50,17 @@ router.get("/cross-references", (req, res) => {
   console.log("GET /api/cross-references");
   try {
     const db = getDb();
-    // Return all cross-references, compression middleware will gzip it
-    const refs = db.prepare("SELECT from_verse_id as source, to_verse_id as target, strength FROM cross_references").all();
+    const limitParam = Number(req.query.limit ?? 5000);
+    const limit = Number.isFinite(limitParam)
+      ? Math.max(1, Math.min(50000, Math.floor(limitParam)))
+      : 5000;
+
+    // Keep payloads small for serverless response-size limits.
+    const refs = db
+      .prepare(
+        "SELECT from_verse_id as source, to_verse_id as target, strength FROM cross_references ORDER BY strength DESC LIMIT ?"
+      )
+      .all(limit);
     res.json(refs);
   } catch (e: any) {
     console.error("Error fetching refs:", e);

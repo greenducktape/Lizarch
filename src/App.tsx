@@ -65,7 +65,7 @@ export default function App() {
         const [booksRes, chaptersRes, refsRes] = await Promise.all([
           fetch('/api/books'),
           fetch('/api/chapters'),
-          fetch('/api/cross-references')
+          fetch('/api/cross-references?limit=5000')
         ]);
         
         if (!booksRes.ok || !chaptersRes.ok || !refsRes.ok) {
