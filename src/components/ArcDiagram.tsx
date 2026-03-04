@@ -33,6 +33,14 @@ interface ArcDiagramProps {
   className?: string;
 }
 
+const CATEGORIES = [
+  { id: 'pentateuch', name: 'Pentateuch/History', color: '#10B981', start: 1, end: 17 },
+  { id: 'poetry', name: 'Poetry/Wisdom', color: '#8B5CF6', start: 18, end: 22 },
+  { id: 'prophets', name: 'Prophets', color: '#F59E0B', start: 23, end: 39 },
+  { id: 'gospels', name: 'Gospels/Acts', color: '#3B82F6', start: 40, end: 44 },
+  { id: 'epistles', name: 'Epistles/Revelation', color: '#EC4899', start: 45, end: 66 }
+];
+
 export default function ArcDiagram({ books, chapters, references, onSelectReference, selectedBook, className }: ArcDiagramProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -73,6 +81,56 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
         .attr("class", "zoom-layer")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
+    // Define gradients for cross-category arcs
+    const defs = svg.append("defs");
+    
+    // Glow filter for strong connections
+    const filter = defs.append("filter")
+      .attr("id", "glow")
+      .attr("x", "-20%")
+      .attr("y", "-20%")
+      .attr("width", "140%")
+      .attr("height", "140%");
+      
+    filter.append("feGaussianBlur")
+      .attr("stdDeviation", "2")
+      .attr("result", "blur");
+      
+    const feMerge = filter.append("feMerge");
+    feMerge.append("feMergeNode").attr("in", "blur");
+    feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+
+    CATEGORIES.forEach(c1 => {
+      CATEGORIES.forEach(c2 => {
+        if (c1.id !== c2.id) {
+          const gradient = defs.append("linearGradient")
+            .attr("id", `grad-${c1.id}-${c2.id}`)
+            .attr("x1", "0%")
+            .attr("y1", "0%")
+            .attr("x2", "100%")
+            .attr("y2", "0%");
+          
+          gradient.append("stop")
+            .attr("offset", "0%")
+            .attr("stop-color", c1.color);
+            
+          gradient.append("stop")
+            .attr("offset", "100%")
+            .attr("stop-color", c2.color);
+        }
+      });
+    });
+
+    const getCategoryForBook = (bookId: number) => {
+      return CATEGORIES.find(c => bookId >= c.start && bookId <= c.end) || CATEGORIES[0];
+    };
+
+    const getCategoryForOrdinal = (ordinal: number) => {
+      // Binary search could be faster, but linear is fine for 66 items
+      const book = books.find(b => ordinal >= b.start_ordinal && ordinal < b.start_ordinal + b.verse_count);
+      return book ? getCategoryForBook(book.id) : CATEGORIES[0];
+    };
+
     // Calculate total "units" (approx verses)
     const totalUnits = books.reduce((acc, b) => acc + b.verse_count, 0);
 
@@ -101,18 +159,18 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
       .attr("width", d => Math.max(1, x(d.end) - x(d.start))) // Ensure at least 1px
       .attr("height", 10)
       .attr("fill", d => {
-        if (selectedBook && selectedBook !== 'ALL' && d.name === selectedBook) return "#10b981"; // Emerald for selected
-        return d.testament === "OT" ? "#64748b" : "#94a3b8"; // Slate colors
+        if (selectedBook && selectedBook !== 'ALL' && d.name === selectedBook) return "#ffffff"; // White for selected
+        return getCategoryForBook(d.id).color;
       })
       .attr("stroke", "#0f172a")
       .attr("stroke-width", 0.5)
       .on("mouseover", function(event, d) {
-          d3.select(this).attr("fill", "#38bdf8");
+          d3.select(this).attr("fill", "#ffffff");
       })
       .on("mouseout", function(event, d) {
           d3.select(this).attr("fill", () => {
-            if (selectedBook && selectedBook !== 'ALL' && d.name === selectedBook) return "#10b981";
-            return d.testament === "OT" ? "#64748b" : "#94a3b8";
+            if (selectedBook && selectedBook !== 'ALL' && d.name === selectedBook) return "#ffffff";
+            return getCategoryForBook(d.id).color;
           });
       });
 
@@ -130,7 +188,7 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
       .attr("text-anchor", "middle")
       .text(d => d.name)
       .attr("font-size", "10px")
-      .attr("fill", d => (selectedBook && selectedBook !== 'ALL' && d.name === selectedBook) ? "#10b981" : "#94a3b8")
+      .attr("fill", d => (selectedBook && selectedBook !== 'ALL' && d.name === selectedBook) ? "#ffffff" : getCategoryForBook(d.id).color)
       .attr("font-weight", d => (selectedBook && selectedBook !== 'ALL' && d.name === selectedBook) ? "bold" : "normal")
       .style("pointer-events", "none")
       .style("opacity", d => {
@@ -182,10 +240,16 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
       
     const arcsGroup = zoomGroup.append("g").attr("class", "arcs");
 
-    // Color scale
-    const colorScale = d3.scaleSequential()
-        .domain([0, totalUnits])
-        .interpolator(d3.interpolateTurbo);
+    const maxStrength = d3.max(validRefs, d => d.strength) || 1;
+    const minStrength = d3.min(validRefs, d => d.strength) || 0;
+    
+    const opacityScale = d3.scaleLinear()
+      .domain([minStrength, maxStrength])
+      .range([0.15, 0.8]); // Thin, semi-transparent to glowing
+      
+    const widthScale = d3.scaleLinear()
+      .domain([minStrength, maxStrength])
+      .range([0.5, 2.5]); // Thin to thicker neon lines
 
     arcsGroup.selectAll("path")
       .data(validRefs)
@@ -206,23 +270,34 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
                 A ${Math.abs(end - start)/2}, ${constrainedHeight} 0 0 ${start < end ? 1 : 0} ${end}, ${innerHeight - 20}`;
       })
       .style("fill", "none")
-      .style("stroke", d => colorScale(Math.abs(d.target - d.source)))
-      .style("stroke-width", 1)
-      .style("opacity", 0.3)
+      .style("stroke", d => {
+         const cat1 = getCategoryForOrdinal(Math.min(d.source, d.target));
+         const cat2 = getCategoryForOrdinal(Math.max(d.source, d.target));
+         return cat1.id === cat2.id ? cat1.color : `url(#grad-${cat1.id}-${cat2.id})`;
+      })
+      .style("stroke-width", d => widthScale(d.strength))
+      .style("opacity", d => opacityScale(d.strength))
+      .style("filter", d => d.strength > (maxStrength + minStrength) / 2 ? "url(#glow)" : "none")
       .on("mouseover", function(event, d) {
         d3.select(this)
             .style("stroke", "#fff")
-            .style("stroke-width", 3)
+            .style("stroke-width", widthScale(d.strength) * 2)
             .style("opacity", 1)
+            .style("filter", "url(#glow)")
             .raise(); // Bring to front
         setHoveredArc(d);
       })
       .on("mouseout", function(event, d) {
         const currentTransform = d3.zoomTransform(svg.node() as Element);
+        const cat1 = getCategoryForOrdinal(Math.min(d.source, d.target));
+        const cat2 = getCategoryForOrdinal(Math.max(d.source, d.target));
+        const strokeColor = cat1.id === cat2.id ? cat1.color : `url(#grad-${cat1.id}-${cat2.id})`;
+        
         d3.select(this)
-            .style("stroke", colorScale(Math.abs(d.target - d.source)))
-            .style("stroke-width", Math.min(2.5, 1 + (currentTransform.k - 1) * 0.1))
-            .style("opacity", 0.3);
+            .style("stroke", strokeColor)
+            .style("stroke-width", widthScale(d.strength) * Math.min(2, 1 + (currentTransform.k - 1) * 0.1))
+            .style("opacity", opacityScale(d.strength))
+            .style("filter", d.strength > (maxStrength + minStrength) / 2 ? "url(#glow)" : "none");
         setHoveredArc(null);
       })
       .on("click", (event, d) => {
@@ -280,7 +355,7 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
                 return `M ${start}, ${innerHeight - 20} 
                         A ${Math.abs(end - start)/2}, ${constrainedHeight} 0 0 ${start < end ? 1 : 0} ${end}, ${innerHeight - 20}`;
             })
-            .style("stroke-width", Math.min(2.5, 1 + (transform.k - 1) * 0.1)); // Make lines thicker when zoomed in
+            .style("stroke-width", (d: any) => widthScale(d.strength) * Math.min(2, 1 + (transform.k - 1) * 0.1)); // Make lines thicker when zoomed in
       });
 
     svg.call(zoom);
