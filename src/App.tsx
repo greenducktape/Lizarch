@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import ArcDiagram from './components/ArcDiagram';
 import BibleReader from './components/BibleReader';
 import { Info, Book, Filter } from 'lucide-react';
@@ -247,6 +248,7 @@ export default function App() {
           onClose={() => setReaderOpen(false)} 
         />
       )}
+      <Analytics />
     </div>
   );
 }

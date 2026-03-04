@@ -14,6 +14,7 @@
     "@google/genai": "^1.29.0",
     "@tailwindcss/vite": "^4.1.14",
     "@types/d3": "^7.4.3",
+    "@vercel/analytics": "^1.6.1",
     "@vitejs/plugin-react": "^5.0.4",
     "adm-zip": "^0.5.16",
     "better-sqlite3": "^12.4.1",
