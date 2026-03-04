@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
+import { ColorPalette, PALETTES } from '../constants';
 
 interface Book {
   id: number;
@@ -15,6 +16,7 @@ interface CrossReference {
   source: number;
   target: number;
   strength: number;
+  description?: string;
 }
 
 interface Chapter {
@@ -31,21 +33,23 @@ interface ArcDiagramProps {
   onSelectReference: (source: number, target: number) => void;
   selectedBook?: string;
   className?: string;
+  palette: ColorPalette;
+  theme: 'dark' | 'light';
 }
 
-const CATEGORIES = [
-  { id: 'pentateuch', name: 'Pentateuch/History', color: '#10B981', start: 1, end: 17 },
-  { id: 'poetry', name: 'Poetry/Wisdom', color: '#8B5CF6', start: 18, end: 22 },
-  { id: 'prophets', name: 'Prophets', color: '#F59E0B', start: 23, end: 39 },
-  { id: 'gospels', name: 'Gospels/Acts', color: '#3B82F6', start: 40, end: 44 },
-  { id: 'epistles', name: 'Epistles/Revelation', color: '#EC4899', start: 45, end: 66 }
-];
-
-export default function ArcDiagram({ books, chapters, references, onSelectReference, selectedBook, className }: ArcDiagramProps) {
+export default function ArcDiagram({ books, chapters, references, onSelectReference, selectedBook, className, palette, theme }: ArcDiagramProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoveredArc, setHoveredArc] = useState<CrossReference | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  const CATEGORIES = [
+    { id: 'pentateuch', name: 'Pentateuch/History', color: palette.colors.pentateuch, start: 1, end: 17 },
+    { id: 'poetry', name: 'Poetry/Wisdom', color: palette.colors.poetry, start: 18, end: 22 },
+    { id: 'prophets', name: 'Prophets', color: palette.colors.prophets, start: 23, end: 39 },
+    { id: 'gospels', name: 'Gospels/Acts', color: palette.colors.gospels, start: 40, end: 44 },
+    { id: 'epistles', name: 'Epistles/Revelation', color: palette.colors.epistles, start: 45, end: 66 }
+  ];
 
   // Handle Resize
   useEffect(() => {
@@ -63,6 +67,18 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
     resizeObserver.observe(containerRef.current);
     return () => resizeObserver.disconnect();
   }, []);
+
+  const getRefFromOrdinal = (ordinal: number) => {
+    if (!books.length || !chapters.length) return `Ordinal ${ordinal}`;
+    const book = books.find(b => ordinal >= b.start_ordinal && ordinal < b.start_ordinal + b.verse_count);
+    if (!book) return `Ordinal ${ordinal}`;
+    
+    const chapter = chapters.find(c => c.book_id === book.id && ordinal >= c.start_ordinal && ordinal < c.start_ordinal + c.verse_count);
+    if (!chapter) return `${book.name} (Ord: ${ordinal})`;
+    
+    const verse = ordinal - chapter.start_ordinal + 1;
+    return `${book.name} ${chapter.chapter}:${verse}`;
+  };
 
   // Draw Chart
   useEffect(() => {
@@ -147,6 +163,12 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
     });
 
     // Draw Book Blocks (Timeline)
+    const isLight = theme === 'light';
+    const bgColor = isLight ? "#f8fafc" : "#0f172a";
+    const textColor = isLight ? "#475569" : "#64748b";
+    const highlightColor = isLight ? "#000000" : "#ffffff";
+    const strokeColor = isLight ? "#e2e8f0" : "#1e293b";
+
     const bookGroup = zoomGroup.append("g").attr("class", "books")
         .attr("transform", `translate(0, ${innerHeight - 20})`);
 
@@ -159,17 +181,17 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
       .attr("width", d => Math.max(1, x(d.end) - x(d.start))) // Ensure at least 1px
       .attr("height", 10)
       .attr("fill", d => {
-        if (selectedBook && selectedBook !== 'ALL' && d.name === selectedBook) return "#ffffff"; // White for selected
+        if (selectedBook && selectedBook !== 'ALL' && d.name === selectedBook) return highlightColor; // Highlight for selected
         return getCategoryForBook(d.id).color;
       })
-      .attr("stroke", "#0f172a")
+      .attr("stroke", bgColor)
       .attr("stroke-width", 0.5)
       .on("mouseover", function(event, d) {
-          d3.select(this).attr("fill", "#ffffff");
+          d3.select(this).attr("fill", highlightColor);
       })
       .on("mouseout", function(event, d) {
           d3.select(this).attr("fill", () => {
-            if (selectedBook && selectedBook !== 'ALL' && d.name === selectedBook) return "#ffffff";
+            if (selectedBook && selectedBook !== 'ALL' && d.name === selectedBook) return highlightColor;
             return getCategoryForBook(d.id).color;
           });
       });
@@ -188,7 +210,7 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
       .attr("text-anchor", "middle")
       .text(d => d.name)
       .attr("font-size", "10px")
-      .attr("fill", d => (selectedBook && selectedBook !== 'ALL' && d.name === selectedBook) ? "#ffffff" : getCategoryForBook(d.id).color)
+      .attr("fill", d => (selectedBook && selectedBook !== 'ALL' && d.name === selectedBook) ? highlightColor : getCategoryForBook(d.id).color)
       .attr("font-weight", d => (selectedBook && selectedBook !== 'ALL' && d.name === selectedBook) ? "bold" : "normal")
       .style("pointer-events", "none")
       .style("opacity", d => {
@@ -214,7 +236,7 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
       .attr("x2", d => x(d.start))
       .attr("y1", 10)
       .attr("y2", 15)
-      .attr("stroke", "#0f172a")
+      .attr("stroke", bgColor)
       .attr("stroke-width", 0.5)
       .style("opacity", d => (x(d.end) - x(d.start)) > 10 ? 0.5 : 0);
 
@@ -227,7 +249,7 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
       .attr("text-anchor", "middle")
       .text(d => d.chapter)
       .attr("font-size", "8px")
-      .attr("fill", "#64748b")
+      .attr("fill", textColor)
       .style("pointer-events", "none")
       .style("opacity", d => (x(d.end) - x(d.start)) > 15 ? 1 : 0);
 
@@ -280,7 +302,7 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
       .style("filter", d => d.strength > (maxStrength + minStrength) / 2 ? "url(#glow)" : "none")
       .on("mouseover", function(event, d) {
         d3.select(this)
-            .style("stroke", "#fff")
+            .style("stroke", highlightColor)
             .style("stroke-width", widthScale(d.strength) * 2)
             .style("opacity", 1)
             .style("filter", "url(#glow)")
@@ -385,23 +407,30 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
   };
 
   return (
-    <div ref={containerRef} className={`relative w-full h-full bg-slate-950 rounded-xl overflow-hidden shadow-2xl border border-slate-800 ${className}`}>
+    <div ref={containerRef} className={`relative w-full h-full rounded-xl overflow-hidden shadow-2xl border ${theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'} ${className}`}>
       <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="w-full h-full cursor-move" />
       
       {hoveredArc && (
-        <div className="absolute top-4 left-4 bg-slate-900/90 backdrop-blur border border-slate-700 p-3 rounded-lg text-xs text-slate-200 pointer-events-none shadow-xl z-10">
-          <div className="font-mono text-emerald-400 mb-1">Connection Found</div>
-          <div>Source Ordinal: {hoveredArc.source}</div>
-          <div>Target Ordinal: {hoveredArc.target}</div>
-          <div className="text-slate-500 mt-1">Click to compare passages</div>
+        <div className={`absolute top-4 left-4 max-w-[200px] md:max-w-xs backdrop-blur border p-3 rounded-lg text-xs pointer-events-none shadow-xl z-10 ${theme === 'light' ? 'bg-white/90 border-slate-200 text-slate-800' : 'bg-slate-900/90 border-slate-700 text-slate-200'}`}>
+          <div className={`font-mono mb-1 ${theme === 'light' ? 'text-emerald-600' : 'text-emerald-400'}`}>
+            {hoveredArc.description ? 'Prophecy Fulfillment' : 'Connection Found'}
+          </div>
+          {hoveredArc.description && (
+            <div className="mb-2 font-medium italic border-l-2 border-emerald-500 pl-2 py-1 bg-emerald-500/10 rounded-r">
+              {hoveredArc.description}
+            </div>
+          )}
+          <div>Source: {getRefFromOrdinal(hoveredArc.source)}</div>
+          <div>Target: {getRefFromOrdinal(hoveredArc.target)}</div>
+          <div className={`mt-1 ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>Click to compare passages</div>
         </div>
       )}
       
-      <div className="absolute bottom-4 right-4 flex items-center gap-4 pointer-events-none">
-        <span className="text-xs text-slate-600">Scroll to Zoom • Drag to Pan</span>
+      <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2 pointer-events-none">
+        <span className={`text-[10px] md:text-xs ${theme === 'light' ? 'text-slate-500' : 'text-slate-600'}`}>Scroll/Pinch to Zoom • Drag to Pan</span>
         <button 
             onClick={handleResetZoom}
-            className="pointer-events-auto px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded border border-slate-700 transition-colors"
+            className={`pointer-events-auto px-4 py-2 md:px-3 md:py-1 text-xs rounded border transition-colors shadow-lg ${theme === 'light' ? 'bg-white hover:bg-slate-100 text-slate-600 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'}`}
         >
             Reset View
         </button>
