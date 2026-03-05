@@ -375,6 +375,25 @@ export default function App() {
                   </div>
               </div>
 
+              {/* Classification Legend (Mobile) */}
+              <div>
+                  <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>Classification</label>
+                  <div className="grid grid-cols-2 gap-3 p-4 rounded-lg border bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800">
+                    {[
+                      { label: 'Pentateuch', color: activePalette.colors.pentateuch },
+                      { label: 'Poetry', color: activePalette.colors.poetry },
+                      { label: 'Prophets', color: activePalette.colors.prophets },
+                      { label: 'Gospels', color: activePalette.colors.gospels },
+                      { label: 'Epistles', color: activePalette.colors.epistles },
+                    ].map(item => (
+                      <div key={item.label} className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
+                        <span className={`text-[10px] font-medium ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>{item.label}</span>
+                      </div>
+                    ))}
+                  </div>
+              </div>
+
               {/* Theme Toggle */}
               <div className={`pt-6 border-t ${theme === 'light' ? 'border-slate-200' : 'border-slate-800'}`}>
                   <button
@@ -434,6 +453,25 @@ export default function App() {
                 palette={activePalette}
                 theme={theme}
               />
+              
+              {/* Legend Overlay */}
+              <div className="absolute bottom-6 left-6 hidden md:flex flex-col gap-2 z-10">
+                <div className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${theme === 'light' ? 'text-slate-400' : 'text-slate-600'}`}>Classification</div>
+                <div className="flex flex-wrap gap-4">
+                  {[
+                    { label: 'Pentateuch', color: activePalette.colors.pentateuch },
+                    { label: 'Poetry', color: activePalette.colors.poetry },
+                    { label: 'Prophets', color: activePalette.colors.prophets },
+                    { label: 'Gospels', color: activePalette.colors.gospels },
+                    { label: 'Epistles', color: activePalette.colors.epistles },
+                  ].map(item => (
+                    <div key={item.label} className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
+                      <span className={`text-[10px] font-medium ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>

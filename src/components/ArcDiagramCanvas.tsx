@@ -276,11 +276,11 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
     d3Svg.selectAll(".chapter-line")
         .attr("x1", (d: any) => newX(d.start))
         .attr("x2", (d: any) => newX(d.start))
-        .style("opacity", (d: any) => (newX(d.end) - newX(d.start)) > 10 ? 0.5 : 0);
+        .style("opacity", (d: any) => (newX(d.end) - newX(d.start)) > 2 ? 0.3 : 0);
 
     d3Svg.selectAll(".chapter-label")
         .attr("x", (d: any) => newX(d.center))
-        .style("opacity", (d: any) => (newX(d.end) - newX(d.start)) > 15 ? 1 : 0);
+        .style("opacity", (d: any) => (newX(d.end) - newX(d.start)) > 20 ? 1 : 0);
 
   }, [dimensions, totalUnits, validRefs, maxStrength, minStrength, hoveredArc, theme, selectedBook, getCategoryForOrdinal]);
 
@@ -348,22 +348,28 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
     const chapterGroup = zoomGroup.append("g").attr("class", "chapters")
         .attr("transform", `translate(0, ${innerHeight - 20})`);
 
+    const maxVerseCount = Math.max(...chapterNodes.map((d: any) => d.verse_count), 1);
+    const chapterHeightScale = d3.scaleLinear()
+      .domain([0, maxVerseCount])
+      .range([0, 30]);
+
     chapterGroup.selectAll("line")
       .data(chapterNodes)
       .enter()
       .append("line")
       .attr("class", "chapter-line")
       .attr("y1", 10)
-      .attr("y2", 15)
-      .attr("stroke", bgColor)
-      .attr("stroke-width", 0.5);
+      .attr("y2", (d: any) => 10 + chapterHeightScale(d.verse_count))
+      .attr("stroke", textColor)
+      .attr("stroke-width", 0.5)
+      .style("opacity", 0.3);
 
     chapterGroup.selectAll("text")
       .data(chapterNodes)
       .enter()
       .append("text")
       .attr("class", "chapter-label")
-      .attr("y", 22)
+      .attr("y", 45)
       .attr("text-anchor", "middle")
       .text((d: any) => d.chapter)
       .attr("font-size", "8px")

@@ -1,6 +1,12 @@
 {
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api"
+    }
+  ],
   "functions": {
-    "api/[...path].ts": {
+    "api/index.ts": {
       "includeFiles": "bible.sqlite"
     }
   }
