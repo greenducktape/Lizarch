@@ -58,10 +58,10 @@ async function seed() {
   const crossRefText = zip.readAsText(entry);
 
   console.log('Initializing Database...');
-  if (fs.existsSync('bible.sqlite')) {
-    fs.unlinkSync('bible.sqlite');
+  if (fs.existsSync('bible.sqlite.tmp')) {
+    fs.unlinkSync('bible.sqlite.tmp');
   }
-  const db = new Database('bible.sqlite');
+  const db = new Database('bible.sqlite.tmp');
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS books (
@@ -170,6 +170,12 @@ async function seed() {
   
   console.log(`Done! Inserted ${globalOrdinal} verses and ${refCount} cross-references.`);
   db.close();
+  
+  if (fs.existsSync('bible.sqlite')) {
+    fs.unlinkSync('bible.sqlite');
+  }
+  fs.renameSync('bible.sqlite.tmp', 'bible.sqlite');
+  console.log('Database successfully moved to bible.sqlite');
 }
 
 seed().catch(console.error);
