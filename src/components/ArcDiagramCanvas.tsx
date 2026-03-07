@@ -41,6 +41,7 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hiddenCanvasRef = useRef<HTMLCanvasElement>(null);
+  const hoverCanvasRef = useRef<HTMLCanvasElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   
   // We use a ref to store the current transform to avoid re-renders
@@ -48,6 +49,12 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
   const isZooming = useRef(false);
   
   const [hoveredArc, setHoveredArc] = useState<CrossReference | null>(null);
+  const hoveredArcRef = useRef<CrossReference | null>(null);
+  
+  // Update ref when state changes
+  useEffect(() => {
+    hoveredArcRef.current = hoveredArc;
+  }, [hoveredArc]);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   const CATEGORIES = useMemo(() => [
@@ -216,21 +223,12 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
         ctx.strokeStyle = grad;
       }
 
-      const isHovered = hoveredArc === d;
-      
-      ctx.lineWidth = widthScale(d.strength) * (isHovered ? 2 : 1) * Math.min(2, 1 + (transform.k - 1) * 0.1);
-      ctx.globalAlpha = isHovered ? 1 : opacityScale(d.strength);
-      
-      if (isHovered) {
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = theme === 'light' ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)';
-      } else {
-        ctx.shadowBlur = 0;
-      }
+      ctx.lineWidth = widthScale(d.strength) * Math.min(2, 1 + (transform.k - 1) * 0.1);
+      ctx.globalAlpha = opacityScale(d.strength);
+      ctx.shadowBlur = 0;
 
       ctx.stroke();
       ctx.globalAlpha = 1;
-      ctx.shadowBlur = 0;
 
       // Draw hidden arc
       // Skip if zooming for performance
@@ -282,7 +280,7 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
         .attr("x", (d: any) => newX(d.center))
         .style("opacity", (d: any) => (newX(d.end) - newX(d.start)) > 20 ? 1 : 0);
 
-  }, [dimensions, totalUnits, validRefs, maxStrength, minStrength, hoveredArc, theme, selectedBook, getCategoryForOrdinal]);
+  }, [dimensions, totalUnits, validRefs, maxStrength, minStrength, theme, selectedBook, getCategoryForOrdinal]);
 
 
   // Initialize SVG Elements (One-time setup per dimension change)
@@ -390,10 +388,12 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
       .on("zoom", (event) => {
         transformRef.current = event.transform;
         draw(event.transform);
+        drawHover(event.transform);
       })
       .on("end", () => {
         isZooming.current = false;
         draw(transformRef.current);
+        drawHover(transformRef.current);
       });
 
     svg.call(zoom);
@@ -402,22 +402,101 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
 
   }, [dimensions, bookNodes, chapterNodes, theme, selectedBook, getCategoryForBook, draw]);
 
+  const drawHover = useCallback((transform: d3.ZoomTransform) => {
+    const hoverCanvas = hoverCanvasRef.current;
+    if (!hoverCanvas || dimensions.width === 0) return;
+
+    const ctx = hoverCanvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, hoverCanvas.width, hoverCanvas.height);
+
+    const d = hoveredArcRef.current;
+    if (!d) return;
+
+    const { width, height } = dimensions;
+    const margin = { top: 20, right: 20, bottom: 50, left: 20 };
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.translate(margin.left, margin.top);
+
+    const x = d3.scaleLinear()
+      .domain([0, totalUnits])
+      .range([0, innerWidth]);
+    const newX = transform.rescaleX(x);
+
+    const widthScale = d3.scaleLinear()
+      .domain([minStrength, maxStrength])
+      .range([0.2, 1.5]);
+
+    const start = newX(d.source);
+    const end = newX(d.target);
+    
+    // Culling
+    if (Math.max(start, end) < -100 || Math.min(start, end) > width + 100) return;
+
+    const h = Math.abs(end - start) / 2;
+    const constrainedHeight = Math.min(h, innerHeight - 40);
+    const y = innerHeight - 20;
+    const centerX = (start + end) / 2;
+    const radiusX = Math.abs(end - start) / 2;
+    const radiusY = constrainedHeight;
+
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    try {
+      ctx.ellipse(centerX, y, radiusX, radiusY, 0, Math.PI, 0, false);
+    } catch (e) {
+      ctx.moveTo(start, y);
+      ctx.quadraticCurveTo(centerX, y - radiusY * 2, end, y);
+    }
+
+    const cat1 = getCategoryForOrdinal(Math.min(d.source, d.target));
+    const cat2 = getCategoryForOrdinal(Math.max(d.source, d.target));
+    
+    if (cat1.id === cat2.id) {
+      ctx.strokeStyle = cat1.color;
+    } else {
+      const grad = ctx.createLinearGradient(start, 0, end, 0);
+      grad.addColorStop(0, cat1.color);
+      grad.addColorStop(1, cat2.color);
+      ctx.strokeStyle = grad;
+    }
+
+    ctx.lineWidth = widthScale(d.strength) * 2 * Math.min(2, 1 + (transform.k - 1) * 0.1);
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = theme === 'light' ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)';
+
+    ctx.stroke();
+  }, [dimensions, totalUnits, minStrength, maxStrength, theme, getCategoryForOrdinal]);
+
   // Re-draw when hover changes (for highlighting)
   useEffect(() => {
-    draw(transformRef.current);
-  }, [hoveredArc, draw]);
+    drawHover(transformRef.current);
+  }, [drawHover, hoveredArc]);
 
   // Canvas Setup (Resize)
   useEffect(() => {
     const canvas = canvasRef.current;
     const hiddenCanvas = hiddenCanvasRef.current;
-    if (!canvas || !hiddenCanvas || dimensions.width === 0) return;
+    const hoverCanvas = hoverCanvasRef.current;
+    if (!canvas || !hiddenCanvas || !hoverCanvas || dimensions.width === 0) return;
 
     const dpr = window.devicePixelRatio || 1;
     canvas.width = dimensions.width * dpr;
     canvas.height = dimensions.height * dpr;
     canvas.style.width = `${dimensions.width}px`;
     canvas.style.height = `${dimensions.height}px`;
+    
+    hoverCanvas.width = dimensions.width * dpr;
+    hoverCanvas.height = dimensions.height * dpr;
+    hoverCanvas.style.width = `${dimensions.width}px`;
+    hoverCanvas.style.height = `${dimensions.height}px`;
     
     hiddenCanvas.width = dimensions.width;
     hiddenCanvas.height = dimensions.height;
@@ -427,7 +506,13 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
   }, [dimensions, draw]);
 
   // Interaction Handlers
+  const lastMoveTime = useRef(0);
+  
   const handleMouseMove = (e: React.MouseEvent) => {
+    const now = performance.now();
+    if (now - lastMoveTime.current < 16) return; // ~60fps throttle
+    lastMoveTime.current = now;
+
     const hiddenCanvas = hiddenCanvasRef.current;
     if (!hiddenCanvas) return;
 
@@ -506,6 +591,12 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
       {/* Canvas Layer */}
       <canvas 
         ref={canvasRef} 
+        className="absolute top-0 left-0 w-full h-full pointer-events-none"
+      />
+      
+      {/* Hover Canvas Layer */}
+      <canvas 
+        ref={hoverCanvasRef} 
         className="absolute top-0 left-0 w-full h-full pointer-events-none"
       />
       
