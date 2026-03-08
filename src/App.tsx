@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import ArcDiagram from './components/ArcDiagramCanvas';
 import BibleReader from './components/BibleReader';
-import { Info, Book, Filter, Moon, Sun, Palette, Menu, X } from 'lucide-react';
+import SearchBar from './components/SearchBar';
+import { Info, Book, Filter, Moon, Sun, Palette, Menu, X, Search } from 'lucide-react';
 import { PALETTES, ColorPalette } from './constants';
 import { PROPHECIES, Prophecy } from './data/prophecies';
+import { parseBibleReference } from './utils/referenceParser';
 
 interface BookData {
   id: number;
@@ -43,7 +45,9 @@ export default function App() {
   // Filter State
   const [minStrength, setMinStrength] = useState(5);
   const [selectedBook, setSelectedBook] = useState<string>('ALL');
+  const [selectedChapter, setSelectedChapter] = useState<string>('ALL');
   const [connectionType, setConnectionType] = useState<string>('ALL');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Theme & Palette State
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -139,6 +143,20 @@ export default function App() {
     return chapter.start_ordinal + verseNum - 1; // 0-indexed ordinal, verses are 1-indexed
   };
 
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    const parsed = parseBibleReference(query, books);
+    if (parsed) {
+      setSelectedBook(parsed.book);
+      setSelectedChapter(parsed.chapter ? parsed.chapter.toString() : 'ALL');
+      // If verse is specified, we might want to highlight it, but for now we just filter to the chapter
+      // and let the user see connections for that chapter.
+    } else {
+      // If not parsed, maybe reset or show error
+      setSearchQuery('');
+    }
+  };
+
   const filteredRefs = useMemo(() => {
     const isProphecyMode = connectionType === 'MESSIANIC' || connectionType === 'PROPHECY_ALL';
     
@@ -169,11 +187,29 @@ export default function App() {
 
     // 2. Apply Filters
     const book = selectedBook !== 'ALL' ? books.find(b => b.name === selectedBook) : null;
-    const start = book ? book.start_ordinal : 0;
-    const end = book ? book.start_ordinal + book.verse_count : 0;
+    let start = book ? book.start_ordinal : 0;
+    let end = book ? book.start_ordinal + book.verse_count : 0;
+
+    if (book && selectedChapter !== 'ALL') {
+      const chapterNum = parseInt(selectedChapter);
+      const chapter = chapters.find(c => c.book_id === book.id && c.chapter === chapterNum);
+      if (chapter) {
+        start = chapter.start_ordinal;
+        end = chapter.start_ordinal + chapter.verse_count;
+        
+        // If there's a specific verse in the search query, we could narrow it down further
+        if (searchQuery) {
+          const parsed = parseBibleReference(searchQuery, books);
+          if (parsed && parsed.verse) {
+             start = chapter.start_ordinal + parsed.verse - 1;
+             end = start + 1;
+          }
+        }
+      }
+    }
 
     return baseRefs.filter(r => {
-      // Book Filter (Common to both)
+      // Book/Chapter/Verse Filter (Common to both)
       if (book) {
         const sourceInBook = r.source >= start && r.source < end;
         const targetInBook = r.target >= start && r.target < end;
@@ -200,7 +236,7 @@ export default function App() {
 
       return true; 
     });
-  }, [refs, minStrength, selectedBook, connectionType, books, chapters]);
+  }, [refs, minStrength, selectedBook, selectedChapter, connectionType, books, chapters, searchQuery]);
 
   const isProphecyMode = connectionType === 'MESSIANIC' || connectionType === 'PROPHECY_ALL';
 
@@ -248,7 +284,11 @@ export default function App() {
               <div className="group relative">
                 <select 
                   value={selectedBook} 
-                  onChange={(e) => setSelectedBook(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedBook(e.target.value);
+                    setSelectedChapter('ALL');
+                    setSearchQuery('');
+                  }}
                   className={`appearance-none bg-transparent pl-2 pr-8 py-1 text-sm font-medium cursor-pointer outline-none transition-colors ${theme === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                   <option value="ALL">Entire Bible</option>
@@ -258,6 +298,32 @@ export default function App() {
                 </select>
                 <Book size={12} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50" />
               </div>
+
+              {selectedBook !== 'ALL' && (
+                <>
+                  <div className="h-4 w-px bg-current opacity-10"></div>
+                  <div className="group relative">
+                    <select 
+                      value={selectedChapter} 
+                      onChange={(e) => {
+                        setSelectedChapter(e.target.value);
+                        setSearchQuery('');
+                      }}
+                      className={`appearance-none bg-transparent pl-2 pr-8 py-1 text-sm font-medium cursor-pointer outline-none transition-colors ${theme === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'}`}
+                    >
+                      <option value="ALL">All Chapters</option>
+                      {Array.from({ length: books.find(b => b.name === selectedBook)?.chapter_count || 0 }).map((_, i) => (
+                        <option key={i + 1} value={i + 1}>Chapter {i + 1}</option>
+                      ))}
+                    </select>
+                    <Book size={12} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50" />
+                  </div>
+                </>
+              )}
+
+              <div className="h-4 w-px bg-current opacity-10"></div>
+
+              <SearchBar onSearch={handleSearch} theme={theme} />
 
               <div className="h-4 w-px bg-current opacity-10"></div>
 
@@ -342,7 +408,11 @@ export default function App() {
                   <div className="relative">
                     <select 
                         value={selectedBook} 
-                        onChange={(e) => setSelectedBook(e.target.value)}
+                        onChange={(e) => {
+                          setSelectedBook(e.target.value);
+                          setSelectedChapter('ALL');
+                          setSearchQuery('');
+                        }}
                         className={`w-full p-3 rounded-lg border appearance-none outline-none focus:ring-2 focus:ring-emerald-500/50 ${theme === 'light' ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-slate-900 border-slate-800 text-slate-200'}`}
                     >
                         <option value="ALL">Entire Bible</option>
@@ -351,6 +421,54 @@ export default function App() {
                         ))}
                     </select>
                     <Book size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50" />
+                  </div>
+              </div>
+
+              {/* Chapter Selection */}
+              {selectedBook !== 'ALL' && (
+                <div>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>Chapter</label>
+                    <div className="relative">
+                      <select 
+                          value={selectedChapter} 
+                          onChange={(e) => {
+                            setSelectedChapter(e.target.value);
+                            setSearchQuery('');
+                          }}
+                          className={`w-full p-3 rounded-lg border appearance-none outline-none focus:ring-2 focus:ring-emerald-500/50 ${theme === 'light' ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-slate-900 border-slate-800 text-slate-200'}`}
+                      >
+                          <option value="ALL">All Chapters</option>
+                          {Array.from({ length: books.find(b => b.name === selectedBook)?.chapter_count || 0 }).map((_, i) => (
+                            <option key={i + 1} value={i + 1}>Chapter {i + 1}</option>
+                          ))}
+                      </select>
+                      <Book size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50" />
+                    </div>
+                </div>
+              )}
+
+              {/* Search */}
+              <div>
+                  <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>Search Reference</label>
+                  <div className="relative">
+                    <form onSubmit={(e) => {
+                      e.preventDefault();
+                      const input = e.currentTarget.elements.namedItem('search') as HTMLInputElement;
+                      if (input.value) {
+                        handleSearch(input.value);
+                        setMobileMenuOpen(false);
+                      }
+                    }}>
+                      <input 
+                        name="search"
+                        type="text"
+                        placeholder="e.g. Lucas 5:16"
+                        className={`w-full p-3 pl-10 rounded-lg border outline-none focus:ring-2 focus:ring-emerald-500/50 ${theme === 'light' ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-slate-900 border-slate-800 text-slate-200'}`}
+                      />
+                      <button type="submit" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-500">
+                        <Search size={16} />
+                      </button>
+                    </form>
                   </div>
               </div>
 
