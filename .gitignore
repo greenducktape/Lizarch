@@ -6,3 +6,5 @@ coverage/
 *.log
 .env*
 !.env.example
+bible.sqlite
+bible.sqlite.tmp

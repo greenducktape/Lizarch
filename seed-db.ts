@@ -41,7 +41,23 @@ async function download(url: string): Promise<Buffer> {
   });
 }
 
+async function isDbValid(): Promise<boolean> {
+  if (!fs.existsSync('bible.sqlite')) return false;
+  try {
+    const db = new Database('bible.sqlite', { readonly: true });
+    const row = db.prepare("SELECT count(*) as c FROM verses").get() as any;
+    db.close();
+    return row && row.c > 30000;
+  } catch (e) {
+    return false;
+  }
+}
+
 async function seed() {
+  if (await isDbValid()) {
+    console.log('Database bible.sqlite already exists and is valid. Skipping seed.');
+    return;
+  }
   console.log('Downloading Bible JSON...');
   const bibleBuffer = await download(BIBLE_JSON_URL);
   let bibleString = bibleBuffer.toString('utf8');
