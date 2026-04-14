@@ -65,14 +65,14 @@ export default function CrossReferences() {
     async function init() {
       try {
         // Health check
-        const healthRes = await fetch('/api/health');
+        const healthRes = await fetch('/data/books.json'); // Just a dummy check now
         const healthData = await healthRes.json();
-        console.log("API Health Check:", healthData);
+        console.log("Static Data Health Check:", !!healthData);
 
         const [booksRes, chaptersRes, refsRes] = await Promise.all([
-          fetch('/api/books'),
-          fetch('/api/chapters'),
-          fetch('/api/cross-references')
+          fetch('/data/books.json'),
+          fetch('/data/chapters.json'),
+          fetch('/data/cross-references.json')
         ]);
         
         if (!booksRes.ok || !chaptersRes.ok || !refsRes.ok) {
@@ -106,17 +106,16 @@ export default function CrossReferences() {
 
   const handleSelectReference = async (sourceOrdinal: number, targetOrdinal: number) => {
     try {
-      const [sourceRes, targetRes] = await Promise.all([
-        fetch(`/api/verse-by-ordinal?ordinal=${sourceOrdinal}`),
-        fetch(`/api/verse-by-ordinal?ordinal=${targetOrdinal}`)
-      ]);
-      
-      if (sourceRes.ok && targetRes.ok) {
-        const sourceData = await sourceRes.json();
-        const targetData = await targetRes.json();
-        
-        setLeftRef({ book: sourceData.book_name, chapter: sourceData.chapter, verse: sourceData.verse });
-        setRightRef({ book: targetData.book_name, chapter: targetData.chapter, verse: targetData.verse });
+      // Fetch the ordinal mapping first
+      const mappingRes = await fetch('/data/ordinal-to-verse.json');
+      const mapping = await mappingRes.json();
+
+      const sourceInfo = mapping[sourceOrdinal];
+      const targetInfo = mapping[targetOrdinal];
+
+      if (sourceInfo && targetInfo) {
+        setLeftRef({ book: sourceInfo.b, chapter: sourceInfo.c, verse: sourceInfo.v });
+        setRightRef({ book: targetInfo.b, chapter: targetInfo.c, verse: targetInfo.v });
         setReaderOpen(true);
       }
     } catch (e) {

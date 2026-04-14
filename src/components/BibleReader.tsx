@@ -259,7 +259,7 @@ export default function BibleReader({
     async function fetchLeft() {
       setLeftLoading(true);
       try {
-        const res = await fetch(`/api/chapter?book=${leftRef!.book}&chapter=${leftRef!.chapter}`);
+        const res = await fetch(`/data/chapter/${leftRef!.book}/${leftRef!.chapter}.json`);
         const data = await res.json();
         if (isMounted) setLeftVerses(data);
       } catch (e) {
@@ -279,7 +279,7 @@ export default function BibleReader({
     async function fetchRight() {
       setRightLoading(true);
       try {
-        const res = await fetch(`/api/chapter?book=${rightRef!.book}&chapter=${rightRef!.chapter}`);
+        const res = await fetch(`/data/chapter/${rightRef!.book}/${rightRef!.chapter}.json`);
         const data = await res.json();
         if (isMounted) setRightVerses(data);
       } catch (e) {
@@ -333,10 +333,12 @@ export default function BibleReader({
 
   const handleDotClick = async (targetOrdinal: number, sourceVerse: number, side: 'left' | 'right') => {
     try {
-      const res = await fetch(`/api/verse-by-ordinal?ordinal=${targetOrdinal}`);
-      if (res.ok) {
-        const data = await res.json();
-        const newRef = { book: data.book_name, chapter: data.chapter, verse: data.verse };
+      const mappingRes = await fetch('/data/ordinal-to-verse.json');
+      const mapping = await mappingRes.json();
+      const data = mapping[targetOrdinal];
+      
+      if (data) {
+        const newRef = { book: data.b, chapter: data.c, verse: data.v };
         if (side === 'left') {
           setRightRef(newRef);
           setLeftRef(leftRef ? { ...leftRef, verse: sourceVerse } : null);
