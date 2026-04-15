@@ -218,8 +218,11 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
 
     ctx.lineCap = 'round';
     
-    // Pre-calculate line widths based on strength
-    const zoomMultiplier = Math.min(2, 1 + (k - 1) * 0.1);
+    // Pre-calculate line widths and alpha based on zoom level
+    // When zooming in, we make the lines slightly thinner so they don't clump,
+    // but we keep the alpha high enough so they remain clearly visible.
+    const zoomWidthMultiplier = Math.max(0.4, 1 / Math.pow(k, 0.3));
+    const zoomAlphaMultiplier = 1.0; // Maintain original opacity
     const y = innerHeight - 20;
 
     let currentKey = '';
@@ -241,8 +244,8 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
         }
         ctx.beginPath();
         ctx.strokeStyle = d.color1;
-        ctx.lineWidth = d.baseWidth * zoomMultiplier;
-        ctx.globalAlpha = d.alpha;
+        ctx.lineWidth = d.baseWidth * zoomWidthMultiplier;
+        ctx.globalAlpha = d.alpha * zoomAlphaMultiplier;
         currentKey = d.renderKey;
       }
 
@@ -297,14 +300,14 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
         }
         
         hiddenCtx.strokeStyle = `rgb(${r},${g},${b})`;
-        hiddenCtx.lineWidth = Math.max(20, d.baseWidth * zoomMultiplier * 6);
+        hiddenCtx.lineWidth = Math.max(20, d.baseWidth * zoomWidthMultiplier * 6);
         hiddenCtx.stroke();
       }
     }
 
     // --- CANVAS DRAWING (Books & Chapters) ---
     const isLight = theme === 'light';
-    const bgColor = isLight ? "#f8fafc" : "#0f172a";
+    const bgColor = isLight ? "#FDFBF7" : "#0A0A0A";
     const textColor = isLight ? "#475569" : "#64748b";
     const highlightColor = isLight ? "#000000" : "#ffffff";
 
@@ -631,7 +634,7 @@ export default function ArcDiagram({ books, chapters, references, onSelectRefere
   };
 
   return (
-    <div ref={containerRef} className={`relative w-full h-full rounded-xl overflow-hidden shadow-2xl border ${theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'} ${className}`}>
+    <div ref={containerRef} className={`relative w-full h-full ${className}`}>
       {/* Canvas Layer */}
       <canvas 
         ref={canvasRef} 
