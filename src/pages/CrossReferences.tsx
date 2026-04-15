@@ -52,9 +52,9 @@ export default function CrossReferences() {
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Theme & Palette State
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [language, setLanguage] = useState<'en' | 'es'>('en');
-  const [activePaletteId, setActivePaletteId] = useState<string>('minimal');
+  const [activePaletteId, setActivePaletteId] = useState<string>('sunset');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const activePalette = useMemo(() => {

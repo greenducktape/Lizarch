@@ -9,7 +9,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Layout />}>
-          <Route index element={<Navigate to="/bible-board" replace />} />
+          <Route index element={<Navigate to="/crossreferences" replace />} />
           <Route path="bible-board" element={<BibleBoard />} />
           <Route path="Bible board" element={<Navigate to="/bible-board" replace />} />
           <Route path="crossreferences" element={<CrossReferences />} />
