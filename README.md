@@ -29,17 +29,7 @@ Each arc connects two chapters in the Bible. The bars along the bottom represent
 <img width="1338" height="581" alt="grafik" src="https://github.com/user-attachments/assets/d37905d4-da24-472a-a165-ddd29895a00d" />
 
  
-## Why Strength Filtering Matters
- 
-Not all cross-references carry equal weight. A single thematic link is useful, but a pair of verses connected by ten or more independent references is almost certainly saying something the tradition considered central.
- 
-The strength filter lets you move fluidly between two views:
- 
-- **High threshold** → a bird's-eye map of Scripture's strongest spine
-- **Low threshold** → the full tapestry of every thematic thread Torrey identified
----
 
-<img width="1346" height="653" alt="grafik" src="https://github.com/user-attachments/assets/6a005d9f-c1a2-4342-b833-3ddf20ee2237" />
 
  
 ## Credit Where It's Due
@@ -50,6 +40,9 @@ This project stands on the shoulders of others.
 The original arc visualization of Bible cross-references was created by **[Chris Harrison](https://www.chrisharrison.net/index.php/Visualizations/BibleViz)** in collaboration with **Christoph Römhild** in 2007 — a now-iconic piece of information design that mapped 63,000 cross-references as colored arcs. Harrison and Römhild's goal was to create something "more beautiful than functional," and they succeeded so well that their image has inspired a generation of data visualization work.
  
 The cross-reference dataset powering this visualization comes from **[OpenBible.info](https://www.openbible.info/labs/cross-references/)**, who have also published several excellent visualizations of their own using the same data.
+
+<img width="1346" height="653" alt="grafik" src="https://github.com/user-attachments/assets/6a005d9f-c1a2-4342-b833-3ddf20ee2237" />
+
  
 **[Robert Rouse]([https://www.datacrossings.com)](https://viz.bible/remaking-an-influential-cross-reference-visualization/)** built an influential interactive remake of Harrison's visualization in Tableau, analyzing over 340,000 connections from Torrey's *Treasury of Scripture Knowledge*. His remake introduced clickable chapter highlighting and tooltips, and his writing on what the dataset reveals — and what it *doesn't* reveal — about the structure of Scripture was a direct inspiration for this project.
  
@@ -90,7 +83,9 @@ Visit **[beautifulbibledata.com](https://beautifulbibledata.com)** to explore th
 - **Dataset:** [OpenBible.info cross-references](https://www.openbible.info/labs/cross-references/) — ~340,000 references, derived from R.A. Torrey's *Treasury of Scripture Knowledge*
 - **Rendering cap:** 5,000 arcs per view for performance; full dataset available via reader and search
 ---
- 
+
+ <img width="1326" height="651" alt="grafik" src="https://github.com/user-attachments/assets/e399bb43-6788-42d0-8411-b275b1dd005b" />
+
 ## Contact & Feedback
  
 Found a bug, have an idea, or want to collaborate? Open an issue or reach out through [beautifulbibledata.com](https://beautifulbibledata.com).
