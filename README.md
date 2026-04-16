@@ -44,11 +44,16 @@ The strength filter lets you move fluidly between two views:
  
 ## Credit Where It's Due
  
+
 This project stands on the shoulders of others.
  
 The original arc visualization of Bible cross-references was created by **[Chris Harrison](https://www.chrisharrison.net/index.php/Visualizations/BibleViz)** in collaboration with **Christoph Römhild** in 2007 — a now-iconic piece of information design that mapped 63,000 cross-references as colored arcs. Harrison and Römhild's goal was to create something "more beautiful than functional," and they succeeded so well that their image has inspired a generation of data visualization work.
  
-The cross-reference dataset powering this visualization comes from **[OpenBible.info](https://www.openbible.info/labs/cross-references/)**, who have also published several excellent visualizations of their own using the same data. Other designers and developers — including the *Similar Diversity* project, which extended the concept to the holy texts of five major religions — have remade the visualization in different forms over the years.
+The cross-reference dataset powering this visualization comes from **[OpenBible.info](https://www.openbible.info/labs/cross-references/)**, who have also published several excellent visualizations of their own using the same data.
+ 
+**[Robert Rouse]([https://www.datacrossings.com)](https://viz.bible/remaking-an-influential-cross-reference-visualization/)** built an influential interactive remake of Harrison's visualization in Tableau, analyzing over 340,000 connections from Torrey's *Treasury of Scripture Knowledge*. His remake introduced clickable chapter highlighting and tooltips, and his writing on what the dataset reveals — and what it *doesn't* reveal — about the structure of Scripture was a direct inspiration for this project.
+ 
+Other designers and developers — including the *Similar Diversity* project, which extended the concept to the holy texts of five major religions — have remade the visualization in different forms over the years.
  
 This version is my contribution to that lineage: fully interactive, zoomable, searchable, with filters for scope and connection strength, and a reader built in so you can actually *read* the connections rather than just admire them.
  
